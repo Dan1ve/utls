@@ -1526,6 +1526,7 @@ func (m *certificateMsg) unmarshal(data []byte) bool {
 }
 
 type certificateMsgTLS13 struct {
+	original     []byte // [uTLS] preserve original bytes for transcript hash fidelity
 	certificate  Certificate
 	ocspStapling bool
 	scts         bool
@@ -1587,8 +1588,15 @@ func marshalCertificate(b *cryptobyte.Builder, certificate Certificate) {
 	})
 }
 
+// [UTLS SECTION BEGINS]
+func (m *certificateMsgTLS13) originalBytes() []byte {
+	return m.original
+}
+
+// [UTLS SECTION ENDS]
+
 func (m *certificateMsgTLS13) unmarshal(data []byte) bool {
-	*m = certificateMsgTLS13{}
+	*m = certificateMsgTLS13{original: data} // [uTLS] preserve original wire bytes
 	s := cryptobyte.String(data)
 
 	var context cryptobyte.String

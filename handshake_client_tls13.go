@@ -886,8 +886,14 @@ func (hs *clientHandshakeStateTLS13) readServerCertificate() error {
 	signed := signedMessage(sigHash, serverSignatureContext, hs.transcript)
 	if err := verifyHandshakeSignature(sigType, c.peerCertificates[0].PublicKey,
 		sigHash, signed, certVerify.signature); err != nil {
-		c.sendAlert(alertDecryptError)
-		return errors.New("tls: invalid signature by the server certificate: " + err.Error())
+		// [uTLS] Allow skipping handshake signature verification when InsecureSkipVerify is set.
+		// This extends InsecureSkipVerify to cover not just certificate chain validation but also
+		// the CertificateVerify handshake signature, which can fail on servers with non-standard
+		// TLS implementations.
+		if !c.config.InsecureSkipVerify {
+			c.sendAlert(alertDecryptError)
+			return errors.New("tls: invalid signature by the server certificate: " + err.Error())
+		}
 	}
 
 	if err := transcriptMsg(certVerify, hs.transcript); err != nil {
